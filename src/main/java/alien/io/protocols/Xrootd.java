@@ -273,7 +273,7 @@ public class Xrootd extends Protocol {
 				for (final String key : new String[] { "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH" }) {
 					final String old = p.environment().get(key);
 
-					if (old == null || old.length() == 0)
+					if (old == null || old.isEmpty())
 						p.environment().put(key, libPath);
 					else {
 						// check first that the path is not already included
@@ -336,7 +336,7 @@ public class Xrootd extends Protocol {
 	 * @return relevant portion of the output
 	 */
 	public static final String parseXrootdError(final String message) {
-		if (message == null || message.length() == 0)
+		if (message == null || message.isEmpty())
 			return null;
 
 		int idx = message.indexOf("Last server error");
@@ -422,7 +422,7 @@ public class Xrootd extends Protocol {
 	 * @throws IOException
 	 */
 	public Map<PFN, ExitStatus> delete(final List<PFN> pfns, final boolean enforceTicket) throws IOException {
-		if (pfns == null || pfns.size() == 0)
+		if (pfns == null || pfns.isEmpty())
 			throw new IOException("No work");
 
 		if (enforceTicket) {
@@ -435,21 +435,11 @@ public class Xrootd extends Protocol {
 			final List<String> command = new LinkedList<>();
 
 			String envelope = null;
-
-			boolean encryptedEnvelope = false;
-
 			final Map<PFN, ExitStatus> ret = new LinkedHashMap<>();
 
 			for (final PFN pfn : pfns) {
 				if (pfn.ticket != null && pfn.ticket.envelope != null) {
-					envelope = pfn.ticket.envelope.getEncryptedEnvelope();
-
-					if (envelope == null) {
-						envelope = pfn.ticket.envelope.getSignedEnvelope();
-						encryptedEnvelope = false;
-					}
-					else
-						encryptedEnvelope = true;
+					envelope = pfn.ticket.envelope.getSecureEnvelope();
 				}
 
 				String transactionURL = pfn.pfn;
@@ -473,7 +463,7 @@ public class Xrootd extends Protocol {
 					command.add("rm");
 				}
 
-				command.add(path + (envelope != null ? "?" + (encryptedEnvelope ? "authz=" : "") + envelope : ""));
+				command.add(path + (envelope != null ? "?" + pfn.ticket.envelope.getAuthzAttribute() + envelope : ""));
 
 				ret.put(pfn, new ExitStatus(0, 0, null, null, null));
 			}
@@ -686,14 +676,12 @@ public class Xrootd extends Protocol {
 
 			String transactionURL = pfn.pfn;
 
-			if (pfn.ticket != null && pfn.ticket.envelope != null)
+			if (pfn.ticket != null && pfn.ticket.envelope != null) {
 				transactionURL = pfn.ticket.envelope.getTransactionURL();
 
-			if (pfn.ticket != null && pfn.ticket.envelope != null)
-				if (pfn.ticket.envelope.getEncryptedEnvelope() != null)
-					transactionURL += "?authz=" + pfn.ticket.envelope.getEncryptedEnvelope();
-				else if (pfn.ticket.envelope.getSignedEnvelope() != null)
-					transactionURL += "?" + pfn.ticket.envelope.getSignedEnvelope();
+				if (pfn.ticket.envelope.getSecureEnvelope() != null)
+					transactionURL += "?" + pfn.ticket.envelope.getAuthzAttribute() + pfn.ticket.envelope.getSecureEnvelope();
+			}
 
 			transactionURL = decorateOpaqueParams(transactionURL, applicationName, sciTag);
 
@@ -906,16 +894,13 @@ public class Xrootd extends Protocol {
 			if (pfn.ticket != null && pfn.ticket.envelope != null) {
 				transactionURL = pfn.ticket.envelope.getTransactionURL();
 
-				if (pfn.ticket.envelope.getEncryptedEnvelope() != null) {
+				if (pfn.ticket.envelope.getSecureEnvelope() != null) {
 					transactionURL += "?";
-
-					if (!xrootdNewerThan4)
+					if (pfn.ticket.envelope.getAuthzAttribute().equals("authz=") && !xrootdNewerThan4) {
 						transactionURL += "eos.bookingsize=" + guid.size + "&";
-
-					transactionURL += "authz=" + pfn.ticket.envelope.getEncryptedEnvelope();
+					}
+					transactionURL += pfn.ticket.envelope.getAuthzAttribute() + pfn.ticket.envelope.getSecureEnvelope();
 				}
-				else if (pfn.ticket.envelope.getSignedEnvelope() != null)
-					transactionURL += "?" + pfn.ticket.envelope.getSignedEnvelope();
 			}
 
 			transactionURL = decorateOpaqueParams(transactionURL, applicationName, tag);
@@ -982,7 +967,7 @@ public class Xrootd extends Protocol {
 				}
 			}
 
-			if (pfn.ticket != null && pfn.ticket.envelope.getEncryptedEnvelope() != null)
+			if (pfn.ticket != null && pfn.ticket.envelope.getSecureEnvelope() != null)
 				return xrdstat(pfn, false);
 
 			return xrdstat(pfn, true);
@@ -1266,7 +1251,7 @@ public class Xrootd extends Protocol {
 	private Map<PFN, PFNStagingStatus> getStagingStatus(final SE se, final Collection<PFN> pfns) {
 		final Map<PFN, PFNStagingStatus> ret = new HashMap<>();
 
-		if (pfns == null || pfns.size() == 0)
+		if (pfns == null || pfns.isEmpty())
 			return ret;
 
 		if (pfns.size() > PREPARE_PFNS_PER_COMMAND) {
@@ -1282,7 +1267,7 @@ public class Xrootd extends Protocol {
 				}
 			}
 
-			if (subset.size() > 0)
+			if (!subset.isEmpty())
 				ret.putAll(getStagingStatus(se, pfns));
 
 			return ret;
@@ -1419,17 +1404,10 @@ public class Xrootd extends Protocol {
 
 		String envelope = null;
 
-		boolean encryptedEnvelope = true;
-
 		if (pfn.ticket != null && pfn.ticket.envelope != null) {
 			url = new URL(pfn.ticket.envelope.getTransactionURL());
 
-			envelope = pfn.ticket.envelope.getEncryptedEnvelope();
-
-			if (envelope == null) {
-				envelope = pfn.ticket.envelope.getSignedEnvelope();
-				encryptedEnvelope = false;
-			}
+			envelope = pfn.ticket.envelope.getSecureEnvelope();
 		}
 		else
 			url = new URL(pfn.getPFN());
@@ -1448,7 +1426,7 @@ public class Xrootd extends Protocol {
 			path = path.substring(1);
 
 		if (envelope != null)
-			path += "?" + (encryptedEnvelope ? "authz=" : "") + envelope;
+			path += "?" + pfn.ticket.envelope.getAuthzAttribute() + envelope;
 
 		command.add(path);
 
@@ -1720,16 +1698,12 @@ public class Xrootd extends Protocol {
 				targetPath = target.pfn;
 
 			if (sourceEnvelope)
-				if (source.ticket.envelope.getEncryptedEnvelope() != null)
-					sourcePath += "?authz=" + source.ticket.envelope.getEncryptedEnvelope();
-				else if (source.ticket.envelope.getSignedEnvelope() != null)
-					sourcePath += "?" + source.ticket.envelope.getSignedEnvelope();
+				if (source.ticket.envelope.getSecureEnvelope() != null)
+					sourcePath += "?" + source.ticket.envelope.getAuthzAttribute() + source.ticket.envelope.getSecureEnvelope();
 
 			if (targetEnvelope)
-				if (target.ticket.envelope.getEncryptedEnvelope() != null)
-					targetPath += "?authz=" + target.ticket.envelope.getEncryptedEnvelope();
-				else if (target.ticket.envelope.getSignedEnvelope() != null)
-					targetPath += "?" + target.ticket.envelope.getSignedEnvelope();
+				if (target.ticket.envelope.getSecureEnvelope() != null)
+					targetPath += "?" + target.ticket.envelope.getAuthzAttribute() + target.ticket.envelope.getSecureEnvelope();
 
 			sourcePath = decorateOpaqueParams(sourcePath, "transfer-3rd", SciTag.DATA_REPLICATION);
 			targetPath = decorateOpaqueParams(targetPath, "transfer-3rd", SciTag.DATA_REPLICATION);
@@ -1792,7 +1766,7 @@ public class Xrootd extends Protocol {
 					logger.log(Level.WARNING, "Retrying xrdstat, maybe the file shows up with the correct size in a few seconds");
 
 					try {
-						final String ret = xrdstat(target, (target.ticket.envelope.getSignedEnvelope() == null));
+						final String ret = xrdstat(target, true);
 
 						if (ret != null) {
 							logger.log(Level.WARNING, "xrdstat is ok, assuming transfer was successful");
@@ -1817,7 +1791,7 @@ public class Xrootd extends Protocol {
 				throw new IOException(sMessage);
 			}
 
-			return xrdstat(target, (target.ticket.envelope.getSignedEnvelope() == null));
+			return xrdstat(target, true);
 		}
 		catch (final IOException ioe) {
 			throw ioe;
@@ -1953,19 +1927,12 @@ public class Xrootd extends Protocol {
 
 		final URL url;
 
-		boolean encryptedEnvelope = false;
-
 		String envelope = null;
 
 		if (pfn.ticket != null && pfn.ticket.type == AccessType.READ && pfn.ticket.envelope != null) {
 			url = new URL(pfn.ticket.envelope.getTransactionURL());
 
-			envelope = pfn.ticket.envelope.getEncryptedEnvelope();
-
-			if (envelope == null)
-				envelope = pfn.ticket.envelope.getSignedEnvelope();
-			else
-				encryptedEnvelope = true;
+			envelope = pfn.ticket.envelope.getSecureEnvelope();
 		}
 		else
 			url = new URL(pfn.pfn);
@@ -1978,7 +1945,7 @@ public class Xrootd extends Protocol {
 		if (path.startsWith("/"))
 			path = path.substring(1);
 
-		if (path.length() == 0)
+		if (path.isEmpty())
 			path = "/";
 
 		final SpaceInfo ret = new SpaceInfo();
@@ -1997,7 +1964,7 @@ public class Xrootd extends Protocol {
 
 			if (attempt == 1)
 				if (envelope != null)
-					command.add(path + "?" + (encryptedEnvelope ? "authz=" : "") + envelope);
+					command.add(path + "?" + pfn.ticket.envelope.getAuthzAttribute() + envelope);
 				else
 					continue;
 			else
@@ -2091,19 +2058,12 @@ public class Xrootd extends Protocol {
 
 		final URL url;
 
-		boolean encryptedEnvelope = false;
-
 		String envelope = null;
 
 		if (pfn.ticket != null && pfn.ticket.envelope != null) {
 			url = new URL(pfn.ticket.envelope.getTransactionURL());
 
-			envelope = pfn.ticket.envelope.getEncryptedEnvelope();
-
-			if (envelope == null)
-				envelope = pfn.ticket.envelope.getSignedEnvelope();
-			else
-				encryptedEnvelope = true;
+			envelope = pfn.ticket.envelope.getSecureEnvelope();
 		}
 		else
 			url = new URL(pfn.pfn);
@@ -2116,7 +2076,7 @@ public class Xrootd extends Protocol {
 		if (path.startsWith("/"))
 			path = path.substring(1);
 
-		if (path.length() == 0)
+		if (path.isEmpty())
 			path = "/";
 
 		final SpaceInfo ret = new SpaceInfo();
@@ -2134,7 +2094,7 @@ public class Xrootd extends Protocol {
 
 			if (attempt == 1) {
 				if (envelope != null)
-					command.add(path + "?" + (encryptedEnvelope ? "authz=" : "") + envelope);
+					command.add(path + "?" + pfn.ticket.envelope.getAuthzAttribute() + envelope);
 				else
 					continue;
 			}

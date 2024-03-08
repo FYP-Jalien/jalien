@@ -224,10 +224,9 @@ public class JAliEnCommandaccess extends JAliEnBaseCommand {
 				if (pfn.ticket != null) {
 					final XrootDEnvelope env = pfn.ticket.envelope;
 
-					if (!"alice::cern::setest".equals(se.getName().toLowerCase()))
+					if (!"alice::cern::setest".equalsIgnoreCase(se.getName())) {
+						String envelope = env.getSecureEnvelope();
 						if (se.needsEncryptedEnvelope) {
-							String envelope = env.getEncryptedEnvelope();
-
 							if (httpURLs)
 								envelope = XrootDEnvelope.urlEncodeEnvelope(envelope);
 
@@ -240,8 +239,6 @@ public class JAliEnCommandaccess extends JAliEnBaseCommand {
 							commander.printOutln("Encrypted envelope:\n" + envelope);
 						}
 						else {
-							String envelope = env.getEncryptedEnvelope();
-
 							if (accessRequest == AccessType.WRITE)
 								envelope += "&scitag.flow=" + SciTag.CLI_UPLOAD.getTag() + "&eos.app=cliUpload";
 							else
@@ -250,6 +247,7 @@ public class JAliEnCommandaccess extends JAliEnBaseCommand {
 							commander.printOut("envelope", envelope);
 							commander.printOutln("Signed envelope:\n" + envelope);
 						}
+					}
 
 					// If archive member access requested, add it's filename as anchor
 					final String archiveAnchorName = pfn.ticket.envelope.getArchiveAnchorFileName();
