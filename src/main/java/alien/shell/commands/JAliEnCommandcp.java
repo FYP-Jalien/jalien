@@ -890,7 +890,7 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 			}
 
 			if (!bW && pfns.size() > 1 && envelopes.size() > 0) {
-				if (commit(lfn.getCanonicalName(), envelopes, guid, bD ? null : sourceFile, envelopes.size(), true)) {
+				if (commit(lfn.getCanonicalName(), envelopes, guid, sourceFile.length(), bD ? null : sourceFile, envelopes.size(), true)) {
 					envelopes.clear();
 					break;
 				}
@@ -917,14 +917,14 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 		if (futures.size() > 0) {
 			// there was a successfully registered upload so far, we can return true
 
-			new BackgroundUpload(lfn, guid, futures, bD ? sourceFile : null).start();
+			new BackgroundUpload(lfn, guid, futures, bD ? sourceFile : null, sourceFile).start();
 
 			return lfn;
 		}
 		else if (bD && envelopes.size() > 0)
 			sourceFile.delete();
 
-		if (commit(lfn.getCanonicalName(), envelopes, guid, bD ? null : sourceFile, referenceCount, true))
+		if (commit(lfn.getCanonicalName(), envelopes, guid, sourceFile.length(), bD ? null : sourceFile, referenceCount, true))
 			return lfn;
 
 		return null;
@@ -935,9 +935,10 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 		private final List<Future<UploadWork>> futures;
 		private final int originalNoOfCopies;
 		private final File fileToDeleteOnComplete;
+		private final File fileToCheckSize;
 		private final LFN lfn;
 
-		public BackgroundUpload(final LFN lfn, final GUID guid, final List<Future<UploadWork>> futures, final File fileToDeleteOnComplete) {
+		public BackgroundUpload(final LFN lfn, final GUID guid, final List<Future<UploadWork>> futures, final File fileToDeleteOnComplete, final File fileToCheckSize) {
 			super("alien.shell.commands.JAliEnCommandcp.BackgroundUpload (" + futures.size() + " x " + guid.guid + " )");
 
 			this.lfn = lfn;
@@ -945,6 +946,7 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 			this.futures = futures;
 			this.fileToDeleteOnComplete = fileToDeleteOnComplete;
 			this.originalNoOfCopies = futures.size();
+			this.fileToCheckSize = fileToCheckSize;
 		}
 
 		@Override
@@ -999,7 +1001,7 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 			}
 
 			if (envelopes.size() > 0) {
-				commit(lfn.getCanonicalName(), envelopes, guid, null, futures.size(), false);
+				commit(lfn.getCanonicalName(), envelopes, guid, fileToCheckSize.length(), null, futures.size(), false);
 
 				if (fileToDeleteOnComplete != null)
 					fileToDeleteOnComplete.delete();
@@ -1016,8 +1018,13 @@ public class JAliEnCommandcp extends JAliEnBaseCommand {
 	 * @param report
 	 * @return <code>true</code> if the request was successful
 	 */
-	boolean commit(final String lfnToCommit, final Vector<String> envelopes, final GUID guid, final File sourceFile, final int desiredCount, final boolean report) {
+	boolean commit(final String lfnToCommit, final Vector<String> envelopes, final GUID guid, final long testFileSize, final File sourceFile, final int desiredCount, final boolean report) {
 		if (envelopes.size() != 0) {
+			if (testFileSize > 0 && testFileSize != guid.size) {
+				commander.setReturnCode(ErrNo.EBADFD, "The source file has changed during upload (" + guid.size + " -> " + testFileSize + "), not committing it");
+				return false;
+			}
+
 			final List<PFN> registeredPFNs = commander.c_api.registerEnvelopes(envelopes, noCommit ? BOOKING_STATE.KEPT : BOOKING_STATE.COMMITED);
 
 			if (report && (registeredPFNs == null || registeredPFNs.size() != envelopes.size()))
