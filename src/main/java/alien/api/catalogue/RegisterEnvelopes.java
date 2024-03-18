@@ -166,11 +166,23 @@ public class RegisterEnvelopes extends Request {
 			}
 
 			if (bookedpfn != null) {
-				if (size != 0)
-					bookedpfn.getGuid().size = size;
+				if (size != 0) {
+					if (bookedpfn.getGuid().size <= 0)
+						bookedpfn.getGuid().size = size;
+					else if (bookedpfn.getGuid().size != size) {
+						logger.log(Level.WARNING, "The committed size (" + size + ") is different than the known one (" + bookedpfn.getGuid().size + ") for " + bookedpfn.getGuid().guid);
+						return;
+					}
+				}
 
-				if (md5 != null && md5.length() > 0 && !"0".equals(md5))
-					bookedpfn.getGuid().md5 = md5;
+				if (md5 != null && md5.length() > 0 && !"0".equals(md5)) {
+					if (bookedpfn.getGuid().md5 == null || bookedpfn.getGuid().md5.isBlank() || "0".equals(bookedpfn.getGuid().md5))
+						bookedpfn.getGuid().md5 = md5;
+					else if (!md5.equals(bookedpfn.getGuid().md5)) {
+						logger.log(Level.WARNING, "The committed MD5 (" + md5 + ") is different than the known one (" + bookedpfn.getGuid().md5 + ") for " + bookedpfn.getGuid().guid);
+						return;
+					}
+				}
 
 				try {
 					if (flagEntry(bookedpfn)) {
