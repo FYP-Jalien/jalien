@@ -1398,8 +1398,8 @@ public class JobAgent implements Runnable {
 					break;
 				}
 			}
-
-			if (wholeNode == false && tmpIsol == false && (!CgroupUtils.haveCgroupsv2() ||  (CgroupUtils.haveCgroupsv2() && !CgroupUtils.hasController(CgroupUtils.getCurrentCgroup(jobRunnerPid),"cpu")))) {
+			final String currentCgroup = CgroupUtils.getCurrentCgroup(Math.toIntExact(MonitorFactory.getSelfProcessID()));
+			if (wholeNode == false && tmpIsol == false && (!CgroupUtils.haveCgroupsv2() || (CgroupUtils.haveCgroupsv2() && !CgroupUtils.hasController(CgroupUtils.getCurrentCgroup(jobRunnerPid),"cpu")) || (CgroupUtils.haveCgroupsv2() && !currentCgroup.contains("runner")))) {
 				logger.log(Level.INFO, "Applying isolation to the whole JobRunner CPU allocation - Allocation of " + RUNNING_CPU + " cores");
 				String initMask = numaExplorer.computeInitialMask(RUNNING_CPU, wholeNode);
 				NUMAExplorer.applyTaskset(initMask, jobRunnerPid);
