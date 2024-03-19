@@ -424,7 +424,7 @@ public class NUMAExplorer {
 	}
 
 	private byte[] getFullNUMAMask(Integer targetNodeId) {
-		byte[] fullNUMAMask = null;
+		byte[] fullNUMAMask = new byte[numCPUs];
 		if (targetNodeId.intValue() > -1) {
 			Integer numaNode = divisionedNUMA.get(targetNodeId);
 			fullNUMAMask = initialStructurePerNode.get(targetNodeId).clone();
