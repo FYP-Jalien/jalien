@@ -375,13 +375,14 @@ public class NUMAExplorer {
 
 		boolean rearrangementNeeded = true;
 		int rearrangementCount = 0;
+		int rearrangementNotPossible = 0;
 		long queueId = activeJAInstances.get(Integer.valueOf(jobNumber)).getQueueId();
 
 		while (rearrangementNeeded) {
 			int numaNode = getNumaNode(reqCPU, queueId, null, availablePerNode);
 			// We have not found the space needed in any node. Proceed to partition
 			if (numaNode < 0) {
-				if (rearrangementCount == 0) {
+				if (rearrangementCount == 0 && rearrangementNotPossible < 3) {
 					int[] auxUsedCPUs = rearrangeCores(jobNumber, reqCPU);
 					if (!Arrays.equals(usedCPUs, auxUsedCPUs)) {
 						rearrangementCount = rearrangementCount + 1;
@@ -392,6 +393,7 @@ public class NUMAExplorer {
 						}
 						continue;
 					}
+					rearrangementNotPossible = rearrangementNotPossible + 1;
 				}
 				finalMask = getPartitionedMask(reqCPU, jobNumber, structurePerNode, availablePerNode, usedCPUs, numaNode, false);
 			}
@@ -404,7 +406,7 @@ public class NUMAExplorer {
 
 			logger.log(Level.INFO, "Process is going to be pinned to CPU mask " + getMaskString(finalMask));
 
-			if (rearrangementCount > 0)
+			if (rearrangementCount > 0 || rearrangementNotPossible >= 3)
 				rearrangementNeeded = false;
 
 		}
