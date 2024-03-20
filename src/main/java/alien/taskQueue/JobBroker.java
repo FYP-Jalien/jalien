@@ -832,7 +832,7 @@ public class JobBroker {
 
 			db.setReadOnly(true);
 
-			final String q = "select " + ret + " from JOBAGENT where counter>0 " + where + " order by priority desc, price desc, oldestQueueId asc limit 1";
+			final String q = "select " + ret + " from JOBAGENT where priority>0 AND counter>0 " + where + " order by priority desc, price desc, oldestQueueId asc limit 1";
 
 			if (logger.isLoggable(Level.FINE)) {
 				logger.log(Level.FINE, "Going to select agents (" + q + ")");

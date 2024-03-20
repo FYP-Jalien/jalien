@@ -103,23 +103,41 @@ public class CalculateComputedPriority {
     }
 
     private static void updateComputedPriority(PriorityDto dto) {
-        int activeCpuCores = dto.getRunning();
-        int maxCpuCores = dto.getMaxParallelJobs();
-        long historicalUsage = dto.getTotalRunningTimeLast24h() / dto.getMaxTotalRunningTime();
+        if (isQuotaExceeded(dto)) {
+            return;
+        } else {
+            int activeCpuCores = dto.getRunning();
+            int maxCpuCores = dto.getMaxParallelJobs();
+            long historicalUsage = dto.getTotalRunningTimeLast24h() / dto.getMaxTotalRunningTime();
 
-        if (activeCpuCores < maxCpuCores) {
-            double coreUsageCost = activeCpuCores == 0 ? 1 : (activeCpuCores * Math.exp(-historicalUsage));
-            float userLoad = (float) activeCpuCores / maxCpuCores;
-            dto.setUserload(userLoad);
-            double adjustedPriorityFactor = (2.0 - userLoad) * (dto.getPriority() / coreUsageCost);
+            if (activeCpuCores < maxCpuCores) {
+                double coreUsageCost = activeCpuCores == 0 ? 1 : (activeCpuCores * Math.exp(-historicalUsage));
+                float userLoad = (float) activeCpuCores / maxCpuCores;
+                dto.setUserload(userLoad);
+                double adjustedPriorityFactor = (2.0 - userLoad) * (dto.getPriority() / coreUsageCost);
 
-            if (adjustedPriorityFactor > 0) {
-                dto.setComputedPriority((float) (50.0 * adjustedPriorityFactor));
+                if (adjustedPriorityFactor > 0) {
+                    dto.setComputedPriority((float) (50.0 * adjustedPriorityFactor));
+                } else {
+                    dto.setComputedPriority(1);
+                }
             } else {
                 dto.setComputedPriority(1);
             }
-        } else {
-            dto.setComputedPriority(1);
         }
+    }
+
+    private static boolean isQuotaExceeded(PriorityDto dto) {
+        if (dto.getTotalRunningTimeLast24h() > dto.getMaxTotalRunningTime()) {
+            dto.setComputedPriority(-1);
+            logger.log(Level.INFO, "User " + dto.getUserId() + " has exceeded the total running time quota");
+            return true;
+        }
+        if (dto.getRunning() > dto.getMaxParallelJobs()) {
+            dto.setComputedPriority(-1);
+            logger.log(Level.INFO, "User " + dto.getUserId() + " has exceeded the maximum parallel jobs quota");
+            return true;
+        }
+        return false;
     }
 }
