@@ -100,9 +100,8 @@ public final class JobWrapper implements MonitoringObject, Runnable {
 	 * @uml.associationEnd
 	 */
 	private JobStatus jobStatus;
-
 	private boolean killSigReceived = false;
-
+	private int execExitCode = -1;
 	private final Long masterjobID;
 
 	// Other
@@ -338,7 +337,7 @@ public final class JobWrapper implements MonitoringObject, Runnable {
 			ConfigUtils.setSciTag(SciTag.DATA_ACCESS);
 
 			// run payload
-			final int execExitCode = executeJob(packResolver.environment_packages);
+			execExitCode = executeJob(packResolver.environment_packages);
 
 			getTraceFromFile();
 
@@ -1250,8 +1249,9 @@ public final class JobWrapper implements MonitoringObject, Runnable {
 		}
 
 		try {
-			// Write status to file for the JobAgent to see
-			Files.writeString(Paths.get(tmpDir + "/" + jobstatusFile), newStatus.name());
+			// Write status to file for the JobAgent to see, but ignore SV if job will anyway end in EE (in case of timeout in JA)
+			if (!("SAVING".equals(newStatus.name()) && execExitCode != 0))
+				Files.writeString(Paths.get(tmpDir + "/" + jobstatusFile), newStatus.name());
 
 			// Set the updated status
 			if (!TaskQueueApiUtils.setJobStatus(queueId, resubmission, newStatus, extrafields)) {
