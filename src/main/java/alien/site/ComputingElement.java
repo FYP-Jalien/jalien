@@ -605,6 +605,9 @@ public final class ComputingElement extends Thread {
 		final String jarPath = !ConfigUtils.getConfiguration("version").gets("custom.jobagent.jar", "").isBlank() ? ConfigUtils.getConfiguration("version").gets("custom.jobagent.jar") : CVMFS.getJarPath();
 		final String jarClass = "alien.site.JobRunner";
 
+		if (jdkDir.isBlank())
+			return javaCmd + " " + jarPath + " " + jarClass;
+		
 		return jdkDir + "/" + javaCmd + " " + jarPath + " " + jarClass;
 	}
 

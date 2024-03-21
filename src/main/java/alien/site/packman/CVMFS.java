@@ -232,7 +232,7 @@ public class CVMFS extends PackMan {
 			case "aarch64":
 				return JAVA_ARM_DIR;
 			default:
-				return JAVA64_DIR;
+				return "";
 		}
 	}
 
