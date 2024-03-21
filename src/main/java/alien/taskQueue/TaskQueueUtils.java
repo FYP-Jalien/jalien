@@ -1006,8 +1006,8 @@ public class TaskQueueUtils {
 				failcounter++;
 		}
 
-		logger.log(Level.INFO, "Moved " + okcounter + " jobs to " + status + " state" + (failcounter > 0 ? ", " + failcounter + " others failed to be moved" : ""));
-		log.append("Moved ").append(okcounter).append(" jobs to ").append(status).append(" state\n").append(" while ").append(failcounter + " others failed to be moved");
+		logger.log(Level.INFO, "Successfully moved " + okcounter + " jobs to " + status + " state" + (failcounter > 0 ? ", " + failcounter + " others failed to be moved" : ""));
+		log.append("Successfully moved ").append(okcounter).append(" jobs to ").append(status).append(" state.\n").append(failcounter + " jobs failed to be moved\n");
 	}
 
 	private static Integer getUserId(final Long queueId) {
