@@ -75,10 +75,7 @@ public class InactiveJobHandler extends Optimizer {
 			db.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 			String activeJobWithoutHeartbeatQuery = getActiveJobQuery();
 
-			String inactiveJobsWithoutHeartbeatQuery = "SELECT q.queueId, q.statusId FROM QUEUE q JOIN QUEUEPROC qp\n" +
-					"                                           WHERE q.queueId = qp.queueId\n" +
-					"                                               AND  q.statusId IN (" + JobStatus.ZOMBIE.getAliEnLevel() + ")\n" +
-					"                                               AND qp.lastupdate < NOW() - INTERVAL 1 HOUR";
+			String inactiveJobsWithoutHeartbeatQuery = "SELECT queueId, statusId FROM QUEUE WHERE statusId = " + JobStatus.ZOMBIE.getAliEnLevel() + " AND mtime < NOW() - INTERVAL 1 HOUR";
 
 			try (Timing t = new Timing(monitor, "InactiveJobHandler")) {
 				t.startTiming();
