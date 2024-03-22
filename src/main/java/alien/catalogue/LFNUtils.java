@@ -1603,9 +1603,17 @@ public class LFNUtils {
 				return "The directory " + lfn.getCanonicalName() + " is already in a separate table";
 			}
 
-			String alterSourceEngineQuery = "ALTER TABLE L" + lfn.indexTableEntry.tableName + "L ENGINE=InnoDB";
-			if (!db.query(alterSourceEngineQuery, false)) {
-				return "DB query failed:\n" + alterSourceEngineQuery;
+			final Host host = CatalogueUtils.getHost(lfn.indexTableEntry.hostIndex);
+
+			db.query("SELECT `ENGINE` from `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`='" + Format.escSQL(host.db) + "' AND `TABLE_NAME`='L" + lfn.indexTableEntry.tableName + "L';");
+
+			if (!db.gets(1).equalsIgnoreCase("InnoDB")) {
+				logger.log(Level.WARNING, "Converting table to InnoDB before splitting " + host.db + ".L" + lfn.indexTableEntry.tableName + "L");
+
+				final String alterSourceEngineQuery = "ALTER TABLE L" + lfn.indexTableEntry.tableName + "L ENGINE=InnoDB";
+				if (!db.query(alterSourceEngineQuery, false)) {
+					return "DB query failed:\n" + alterSourceEngineQuery;
+				}
 			}
 
 			// generate a name for the destination table
