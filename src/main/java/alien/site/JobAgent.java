@@ -420,7 +420,8 @@ public class JobAgent implements Runnable {
 				MAX_CPU = Long.valueOf(((Number) siteMap.getOrDefault("CPUCores", Integer.valueOf(1))).longValue());
 				RUNNING_CPU = MAX_CPU;
 				// siteMap.Disk is expected to be in KB here, RUNNING_DISK is in MB
-				RUNNING_DISK = Long.valueOf(((Long) siteMap.getOrDefault("Disk", Long.valueOf(10 * 1024 * 1024 * RUNNING_CPU.longValue()))).longValue() / 1024);
+				RUNNING_DISK = Long.parseLong(siteMap.getOrDefault("Disk", Long.valueOf(10 * 1024 * 1024 * RUNNING_CPU.longValue()).longValue()).toString()) / 1024;
+				System.err.println(RUNNING_DISK);
 				origTtl = ((Integer) siteMap.get("TTL")).intValue();
 				RUNNING_JOBAGENTS = 0;
 			}
