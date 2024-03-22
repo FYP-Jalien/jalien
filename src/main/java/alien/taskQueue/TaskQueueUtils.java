@@ -732,9 +732,9 @@ public class TaskQueueUtils {
 			String q;
 
 			if (dbStructure2_20)
-				q = "SELECT statusId,split,cpucores FROM QUEUE where queueId=?;";
+				q = "SELECT statusId,split,cpucores,userId FROM QUEUE where queueId=?;";
 			else
-				q = "SELECT status,split,cpucores FROM QUEUE where queueId=?;";
+				q = "SELECT status,split,cpucores,userId FROM QUEUE where queueId=?;";
 
 			db.setReadOnly(true);
 			db.setQueryTimeout(120);
@@ -799,6 +799,7 @@ public class TaskQueueUtils {
 
 			parentPID = db.getl(2);
 			int cpucores = db.geti("cpucores");
+			int userId = db.geti("userId");
 
 			Object newstatus;
 
@@ -855,7 +856,7 @@ public class TaskQueueUtils {
 
 			putJobLog(job, "state", "Job state transition from " + oldStatus.name() + " to " + newStatus.name(), null);
 
-			updatePriorityRegistry(Long.valueOf(job), cpucores, extrafields, oldStatus, newStatus);
+			updatePriorityRegistry(userId, cpucores, extrafields, oldStatus, newStatus);
 
 			if (JobStatus.finalStates().contains(newStatus) || newStatus == JobStatus.SAVED_WARN || newStatus == JobStatus.SAVED) {
 				deleteJobToken(job);
@@ -877,9 +878,9 @@ public class TaskQueueUtils {
 		}
 	}
 
-	private static void updatePriorityRegistry(Long userId, final int activeCores, HashMap<String, Object> extrafields, JobStatus oldStatus, JobStatus newStatus) {
+	private static void updatePriorityRegistry(Integer userId, final int activeCores, HashMap<String, Object> extrafields, JobStatus oldStatus, JobStatus newStatus) {
 		try {
-			final JobCounter counter = PriorityRegister.JobCounter.getCounterForUser(Math.toIntExact(userId));
+			final JobCounter counter = PriorityRegister.JobCounter.getCounterForUser(userId);
 
 			if (oldStatus == JobStatus.WAITING) {
 				counter.decWaiting();
@@ -899,8 +900,8 @@ public class TaskQueueUtils {
 
 			if (extrafields != null)
 				extrafields.put("userId", userId);
-		} catch (ArithmeticException ae) {
-			logger.log(Level.WARNING, "Failed to convert long to int for userId " + userId, ae);
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "Failed to update the priority registry for user " + userId, e);
 		}
 	}
 
