@@ -2045,22 +2045,27 @@ public class Xrootd extends Protocol {
 								final String key = tok.substring(0, idx);
 								final String value = tok.substring(idx + 1).trim();
 
-								switch (key) {
-									case "oss.space":
-									case "oss.quota":
-										total = Long.parseLong(value);
-										break;
-									case "oss.free":
-										free = Long.parseLong(value);
-										break;
-									case "oss.maxf":
-										largest = Long.parseLong(value);
-										break;
-									case "oss.used":
-										used = Long.parseLong(value);
-										break;
-									default:
-										break;
+								try {
+									switch (key) {
+										case "oss.space":
+										case "oss.quota":
+											total = Math.max(total, Long.parseLong(value));
+											break;
+										case "oss.free":
+											free = Math.max(free, Long.parseLong(value));
+											break;
+										case "oss.maxf":
+											largest = Math.max(largest, Long.parseLong(value));
+											break;
+										case "oss.used":
+											used = Math.max(used, Long.parseLong(value));
+											break;
+										default:
+											break;
+									}
+								}
+								catch (final NumberFormatException nfe) {
+									logger.log(Level.WARNING, "Invalid value `" + value + "` for key `" + key + "` in `" + line + "` for " + pfn.pfn, nfe);
 								}
 							}
 						}
@@ -2068,6 +2073,8 @@ public class Xrootd extends Protocol {
 
 					if (total > 0 && free <= total && free >= 0 && used <= total && used >= 0 && largest <= total && largest >= 0)
 						ret.setSpaceInfo(path, total, free, used, largest);
+					else
+						logger.log(Level.INFO, "Storage returned values are not sane: total=" + total + ", free=" + free + ", used=" + used + ", largest=" + largest);
 				}
 			}
 			catch (final InterruptedException ie) {

@@ -6,6 +6,7 @@ package alien.io.protocols;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -217,7 +218,7 @@ public abstract class Protocol implements Serializable, Comparable<Protocol>, Cl
 	 * @param cmd
 	 */
 	protected void setLastCommand(final List<String> cmd) {
-		this.lastCommand = cmd;
+		this.lastCommand = new ArrayList<>(cmd);
 	}
 
 	private Map<String, String> lastCommandEnv = null;
