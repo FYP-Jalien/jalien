@@ -79,6 +79,13 @@ public class OverwaitingJobHandler extends Optimizer {
 	}
 
 	private static String getQuery() {
-		return "SELECT queueId, statusId from QUEUE where statusId = " + JobStatus.WAITING.getAliEnLevel() + " and (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(mtime)) > 3600 * 24 * 7";
+		return "SELECT queueId, statusId \n" +
+				"FROM QUEUE \n" +
+				"WHERE statusId = " + JobStatus.WAITING.getAliEnLevel() + " \n" +
+				"AND (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(mtime)) > \n" +
+				"    CASE \n" +
+				"        WHEN expired IS NOT NULL THEN expired \n" +
+				"        ELSE 3600 * 24 * 7 \n" +
+				"    END;\n";
 	}
 }
