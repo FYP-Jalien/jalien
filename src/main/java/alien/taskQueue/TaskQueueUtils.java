@@ -101,6 +101,14 @@ public class TaskQueueUtils {
 
 	private static Thread jrTrackerThread;
 
+	private static final int REMOTE_TIMEOUT_DEFAULT = 12 * 60 * 60;
+
+	private static final int REMOTE_TIMEOUT_ABSMAX = 7 * 24 * 60 * 60;
+
+	private static final int MAX_WAITING_TIME_DEFAULT = 7 * 24 * 60 * 60;
+
+	private static final int MAX_WAITING_TIME_ABSMAX = 14 * 24 * 60 * 60;
+
 	static {
 		fieldMap = new HashMap<>();
 		fieldMap.put("path_table", "QUEUEJDL");
@@ -856,7 +864,7 @@ public class TaskQueueUtils {
 
 			putJobLog(job, "state", "Job state transition from " + oldStatus.name() + " to " + newStatus.name(), null);
 
-			updatePriorityRegistry(userId, cpucores, extrafields, oldStatus, newStatus);
+			updatePriorityRegistry(Integer.valueOf(userId), cpucores, extrafields, oldStatus, newStatus);
 
 			if (JobStatus.finalStates().contains(newStatus) || newStatus == JobStatus.SAVED_WARN || newStatus == JobStatus.SAVED) {
 				deleteJobToken(job);
@@ -900,7 +908,8 @@ public class TaskQueueUtils {
 
 			if (extrafields != null)
 				extrafields.put("userId", userId);
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			logger.log(Level.WARNING, "Failed to update the priority registry for user " + userId, e);
 		}
 	}
@@ -2010,6 +2019,16 @@ public class TaskQueueUtils {
 			final Integer cpuCores = j.getInteger("CPUCores");
 
 			values.put("cpucores", cpuCores == null || cpuCores.intValue() < 0 || cpuCores.intValue() > 100 ? Integer.valueOf(1) : cpuCores);
+
+			final Integer maxWaitingTime = j.getInteger("MaxWaitingTime");
+
+			values.put("expires",
+					maxWaitingTime == null || maxWaitingTime.intValue() <= 0 || maxWaitingTime.intValue() > MAX_WAITING_TIME_ABSMAX ? Integer.valueOf(MAX_WAITING_TIME_DEFAULT) : maxWaitingTime);
+
+			final Integer remoteTimeout = j.getInteger("RemoteTimeout");
+
+			values.put("remoteTimeout",
+					remoteTimeout == null || remoteTimeout.intValue() <= 0 || remoteTimeout.intValue() > REMOTE_TIMEOUT_ABSMAX ? Integer.valueOf(REMOTE_TIMEOUT_DEFAULT) : remoteTimeout);
 
 			final String insert = DBFunctions.composeInsert("QUEUE", values);
 
