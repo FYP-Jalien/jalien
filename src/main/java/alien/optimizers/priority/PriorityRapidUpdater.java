@@ -184,8 +184,8 @@ public class PriorityRapidUpdater extends Optimizer {
     }
 
     private static String updateUserQuery(Integer userId, PriorityRegister.JobCounter v) {
-        return "UPDATE PRIORITY SET waiting = waiting + " + v.getWaiting()
-                + ", running = running + " + v.getRunning()
+        return "UPDATE PRIORITY SET waiting = GREATEST(0, waiting + " + v.getWaiting()
+                + ", running = GREATEST(0, running + " + v.getRunning()
                 + ", totalRunningTimeLast24h = totalRunningTimeLast24h + " + v.getCputime()
                 + ", totalCpuCostLast24h = totalCpuCostLast24h + " + v.getCost()
                 + ", active = 1"
