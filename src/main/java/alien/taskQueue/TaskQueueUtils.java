@@ -2576,6 +2576,7 @@ public class TaskQueueUtils {
 				if (!db.query(query, false, Integer.valueOf(newStatus.getAliEnLevel()), Long.valueOf(j.queueId), Integer.valueOf(j.status().getAliEnLevel())))
 					return false;
 
+				updatePriorityRegistry(getUserId(j.queueId), j.cpucores, null, j.status(), newStatus);
 				if (db.getUpdateCount() > 0) {
 					// job stats was updated correctly, let's update the queue table too
 
