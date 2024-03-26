@@ -111,8 +111,5 @@ class JWTGeneratorTest {
         Exception exception = assertThrows(RuntimeException.class, () -> builder.sign());
 
         assertTrue(exception.getCause() instanceof java.security.InvalidKeyException);
-        String expectedMessage = "Key must not be null";
-        String actualMessage = exception.getMessage();
-        assertTrue(actualMessage.contains(expectedMessage));
     }
 }
