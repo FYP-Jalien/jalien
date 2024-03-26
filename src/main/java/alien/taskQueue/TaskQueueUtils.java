@@ -3057,16 +3057,17 @@ public class TaskQueueUtils {
 	 */
 	public static synchronized HashMap<String, String> getConstraintCache() {
 		final long currentTimestamp = System.currentTimeMillis();
-		// Refresh constraint cache every 10 minutes
+		// Refresh constraint cache every 5 minutes
 		if (currentTimestamp - lastConstraintUpdatedTimestamp > CACHE_REFRESH_INTERVAL) {
-			System.err.println("Refreshing constraint cache as it is expired");
+
 			try (DBFunctions db = getQueueDB()) {
 				if (db == null)
 					return null;
 				db.setQueryTimeout(30);
 				db.query("SELECT * FROM SITESONAR_CONSTRAINTS WHERE enabled=true", false);
 
-				logger.log(Level.INFO, "Updating constraint cache at " + currentTimestamp);
+				logger.log(Level.INFO, "Re initiating constraint cache at " + currentTimestamp);
+				constraintCache.clear();
 				while (db.moveNext()) {
 					final String constraintName = db.gets("name");
 					final String constraintExpression = db.gets("expression");

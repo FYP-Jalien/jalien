@@ -2386,7 +2386,7 @@ public class JobAgent implements Runnable {
 	private void addConstraintsToSiteMap(String nodeName, String alienSite) {
 		try {
 
-			final URL url = new URL(siteSonarUrl + "constraints-marta.jsp?hostname=" + URLEncoder.encode(nodeName, charSet) +
+			final URL url = new URL(siteSonarUrl + "constraints.jsp?hostname=" + URLEncoder.encode(nodeName, charSet) +
 					"&ce_name=" + URLEncoder.encode(alienSite, charSet));
 			JSONObject constraints = makeRequest(url, nodeName, alienSite, logger);
 			if (constraints != null && constraints.keySet().size() > 0) {
