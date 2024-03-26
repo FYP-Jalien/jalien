@@ -1372,7 +1372,7 @@ public class JobAgent implements Runnable {
 							.mapToLong(p -> p.toFile().length())
 							.sum();
 				}
-				catch (IOException e) {
+				catch (Exception e) {
 					logger.log(Level.INFO, "Could not compute current size of job workdir " + runningJobWorkdir, e);
 				}
 
