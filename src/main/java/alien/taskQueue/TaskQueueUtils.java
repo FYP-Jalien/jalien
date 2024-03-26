@@ -4462,7 +4462,7 @@ public class TaskQueueUtils {
 					values.clear();
 					values.put("systemKillTs", Long.valueOf(killingTs));
 					values.put("resubmissionCounter", Integer.valueOf(resubmissionCounter));
-					values.put("wouldPreempt", Long.valueOf(wouldPreempt));
+					values.put("queueId", Long.valueOf(wouldPreempt));
 					values.put("hostId", hostId);
 					values.put("siteId", Integer.valueOf(siteId));
 					values.put("killingSlotMemory", Double.valueOf(killingSlotMemory));
