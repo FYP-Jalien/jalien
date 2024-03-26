@@ -65,7 +65,7 @@ public class EncryptedAuthzToken extends AuthzToken {
     private byte[] signature;
 
     // the envelope data itself (token payload)
-    private byte[] envelope;
+    private byte[] envelope_data;
 
     // local private key
     // private RSAPrivateKey privKey;
@@ -198,6 +198,8 @@ public class EncryptedAuthzToken extends AuthzToken {
      */
     @Override
     public String seal(final XrootDEnvelope envelope) throws GeneralSecurityException {
+        envelope_data = envelope.getPlainEnvelope().getBytes();
+
         // System.out.println("starting encryption of:" + (new
         // String(envelope)));
 
@@ -277,7 +279,7 @@ public class EncryptedAuthzToken extends AuthzToken {
 
         cipher.init(Cipher.ENCRYPT_MODE, freshBlowfish, new IvParameterSpec(BLOWFISH_IV));
 
-        final byte[] encryptedEnvelope = cipher.doFinal(envelope);
+        final byte[] encryptedEnvelope = cipher.doFinal(envelope_data);
 
         // Base64-decode envelope
         final byte[] encryptedEnvelopeFinal = new byte[encryptedEnvelope.length + 4 + signature.length];
@@ -328,7 +330,7 @@ public class EncryptedAuthzToken extends AuthzToken {
 
         final Signature signer = Signature.getInstance("SHA1withRSA", "BC");
         signer.initSign(AuthenPrivKey);
-        signer.update(envelope);
+        signer.update(envelope_data);
         return signer.sign();
     }
 
@@ -366,7 +368,7 @@ public class EncryptedAuthzToken extends AuthzToken {
             return null;
         }
 
-        return new String(envelope);
+        return new String(envelope_data);
     }
 
     /**
@@ -412,7 +414,7 @@ public class EncryptedAuthzToken extends AuthzToken {
         // Alien file catalogue version
 
         // big endian
-        final int signatureLength = encryptedEnvelope[0] & 0xff << 24 | encryptedEnvelope[1] & 0xff << 16 | encryptedEnvelope[2] & 0xff << 8 | encryptedEnvelope[3] & 0xff;
+        final int signatureLength = (encryptedEnvelope[0] & 0xff) << 24 | (encryptedEnvelope[1] & 0xff) << 16 | (encryptedEnvelope[2] & 0xff) << 8 | (encryptedEnvelope[3] & 0xff);
 
         final int envelopeOffset = 4 + signatureLength;
 
@@ -425,7 +427,7 @@ public class EncryptedAuthzToken extends AuthzToken {
         // BC provider doing blowfish decryption
         final Cipher cipher = Cipher.getInstance("Blowfish/CBC/PKCS5Padding", "BC");
         cipher.init(Cipher.DECRYPT_MODE, symKeySpec, new IvParameterSpec(BLOWFISH_IV));
-        envelope = cipher.doFinal(encryptedEnvelope, envelopeOffset, encryptedEnvelope.length - envelopeOffset);
+        envelope_data = cipher.doFinal(encryptedEnvelope, envelopeOffset, encryptedEnvelope.length - envelopeOffset);
     }
 
     /**
@@ -438,7 +440,7 @@ public class EncryptedAuthzToken extends AuthzToken {
 
         final Signature signer = Signature.getInstance("SHA1withRSA", "BC");
         signer.initVerify(AuthenPubKey);
-        signer.update(envelope);
+        signer.update(envelope_data);
         return signer.verify(signature);
     }
 
@@ -540,14 +542,14 @@ public class EncryptedAuthzToken extends AuthzToken {
      * @throws CorruptedEnvelopeException is thrown if a parsing error occurs
      */
     public Envelope getEnvelope() throws CorruptedEnvelopeException, GeneralSecurityException {
-        return new Envelope(new String(envelope));
+        return new Envelope(new String(envelope_data));
     }
 
     /**
      * @return the envelope
      */
     public String getEnvelopeString() {
-        return new String(envelope);
+        return new String(envelope_data);
     }
 
 }

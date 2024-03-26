@@ -12,6 +12,7 @@ import alien.se.SE;
 import java.security.GeneralSecurityException;
 import java.security.Signature;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -19,6 +20,7 @@ import java.util.StringTokenizer;
 public class SignedAuthzToken extends AuthzToken {
 
     private final RSAPrivateKey AuthenPrivKey;
+    private RSAPublicKey AuthenPubKey;
 
     public SignedAuthzToken(final RSAPrivateKey PrivKey) {
         this.AuthenPrivKey = PrivKey;
@@ -127,5 +129,70 @@ public class SignedAuthzToken extends AuthzToken {
         signer.update(toBeSigned.getBytes());
 
         return toBeSigned + "&signature=" + Base64.encode(signer.sign());
+    }
+
+    @Override
+    public String unseal(final String rawToken) throws GeneralSecurityException {
+        final HashMap<String, String> env = new HashMap<>();
+
+        final StringBuilder signedEnvelope = new StringBuilder();
+
+        String sEnvelope = rawToken;
+
+        if (sEnvelope.contains("\\&"))
+            sEnvelope = sEnvelope.replace("\\&", "&");
+
+        final StringTokenizer st = new StringTokenizer(sEnvelope, "&");
+
+        while (st.hasMoreTokens()) {
+            final String tok = st.nextToken();
+
+            final int idx = tok.indexOf('=');
+
+            if (idx >= 0) {
+                final String key = tok.substring(0, idx);
+                final String value = tok.substring(idx + 1);
+                env.put(key, value);
+            }
+        }
+
+        if (env.get("hashord") != null) {
+            final StringTokenizer hash = new StringTokenizer(env.get("hashord"), "-");
+
+            while (hash.hasMoreTokens()) {
+                final String key = hash.nextToken();
+
+                if (signedEnvelope.length() > 0)
+                    signedEnvelope.append('&');
+
+                signedEnvelope.append(key).append('=').append(env.get(key));
+            }
+        }
+
+        final Signature signer = Signature.getInstance("SHA384withRSA");
+
+        signer.initVerify(AuthenPubKey);
+
+        signer.update(signedEnvelope.toString().getBytes());
+
+        if (signer.verify(Base64.decode(env.get("signature")))) {
+            return signedEnvelope.toString();
+        }
+        else {
+            if (signedEnvelope.length() > 0)
+                signedEnvelope.append('&');
+
+            signedEnvelope.append("hashord=").append(env.get("hashord"));
+            signer.update(signedEnvelope.toString().getBytes());
+            if (signer.verify(Base64.decode(env.get("signature")))) {
+                return signedEnvelope.toString();
+            }
+            else
+                return null;
+        }
+    }
+
+    public void setAuthenPubKey(final RSAPublicKey authenPubKey) {
+        AuthenPubKey = authenPubKey;
     }
 }

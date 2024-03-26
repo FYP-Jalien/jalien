@@ -12,12 +12,11 @@ import org.bouncycastle.pkcs.PKCSException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
 import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.HashMap;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,25 +41,25 @@ public class XrootDEnvelopeSigner {
 	private static final RSAPrivateKey SEPrivKey;
 	private static final RSAPublicKey SEPubKey;
 
-	/**
+	/*
 	 * load the RSA keys for envelope signature, keys are supposed to be in pem, and can be created with: openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout lpriv.pem -out lpub.pem
 	 */
 	static {
 		Security.addProvider(new BouncyCastleProvider());
 
-		JAuthZPrivLocation = ConfigUtils.getConfig().gets("jAuthZ.priv.key.location", UserFactory.getUserHome() + System.getProperty("file.separator") + ".alien"
-				+ System.getProperty("file.separator") + "authen" + System.getProperty("file.separator") + "lpriv.pem");
-		JAuthZPubLocation = ConfigUtils.getConfig().gets("jAuthZ.pub.key.location", UserFactory.getUserHome() + System.getProperty("file.separator") + ".alien"
-				+ System.getProperty("file.separator") + "authen" + System.getProperty("file.separator") + "lpub.pem");
-		SEPrivLocation = ConfigUtils.getConfig().gets("SE.priv.key.location", UserFactory.getUserHome() + System.getProperty("file.separator") + ".alien" + System.getProperty("file.separator")
-				+ "authen" + System.getProperty("file.separator") + "rpriv.pem");
-		SEPubLocation = ConfigUtils.getConfig().gets("SE.pub.key.location", UserFactory.getUserHome() + System.getProperty("file.separator") + ".alien" + System.getProperty("file.separator")
-				+ "authen" + System.getProperty("file.separator") + "rpub.pem");
+		JAuthZPrivLocation = ConfigUtils.getConfig().gets("jAuthZ.priv.key.location", UserFactory.getUserHome() + FileSystems.getDefault().getSeparator() + ".alien"
+				+ FileSystems.getDefault().getSeparator() + "authen" + FileSystems.getDefault().getSeparator() + "lpriv.pem");
+		JAuthZPubLocation = ConfigUtils.getConfig().gets("jAuthZ.pub.key.location", UserFactory.getUserHome() + FileSystems.getDefault().getSeparator() + ".alien"
+				+ FileSystems.getDefault().getSeparator() + "authen" + FileSystems.getDefault().getSeparator() + "lpub.pem");
+		SEPrivLocation = ConfigUtils.getConfig().gets("SE.priv.key.location", UserFactory.getUserHome() + FileSystems.getDefault().getSeparator() + ".alien"
+				+ FileSystems.getDefault().getSeparator() + "authen" + FileSystems.getDefault().getSeparator() + "rpriv.pem");
+		SEPubLocation = ConfigUtils.getConfig().gets("SE.pub.key.location", UserFactory.getUserHome() + FileSystems.getDefault().getSeparator() + ".alien"
+				+ FileSystems.getDefault().getSeparator() + "authen" + FileSystems.getDefault().getSeparator() + "rpub.pem");
 
-		// System.out.println("Using private JAuthZ Key: " + JAuthZPrivLocation
-		// + "/" + JAuthZPubLocation);
-		// System.out.println("Using private SE Key: " + SEPrivLocation + "/" +
-		// SEPubLocation);
+		if (logger.isLoggable(Level.FINEST)) {
+			logger.log(Level.FINEST, "Using private JAuthZ Key: " + JAuthZPrivLocation + "/" + JAuthZPubLocation);
+			logger.log(Level.FINEST, "Using private SE Key: " + SEPrivLocation + "/" + SEPubLocation);
+		}
 
 		RSAPrivateKey jAuthZPrivKey = null;
 		RSAPublicKey jAuthZPubKey = null;
@@ -120,7 +119,6 @@ public class XrootDEnvelopeSigner {
 			logger.log(Level.FINEST, "Encrypting this envelope:\n" + envelope.getPlainEnvelope());
 
 		envelope.setSecureEnvelope(authz.seal(envelope));
-
 	}
 
 	/**
@@ -128,72 +126,21 @@ public class XrootDEnvelopeSigner {
      * Doesn't work with encrypted envelopes and sciTokens
      *
 	 * @param envelope signed envelope
-	 * @param selfSigned
+	 * @param selfSigned <code>true</code> if self signed
 	 * @return <code>true</code> if the signature verifies
 	 * @throws NoSuchAlgorithmException
 	 * @throws InvalidKeyException
 	 * @throws SignatureException
 	 */
-	public static boolean verifyEnvelope(final String envelope, final boolean selfSigned) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-
-		final HashMap<String, String> env = new HashMap<>();
-
-		final StringBuilder signedEnvelope = new StringBuilder();
-
-		String sEnvelope = envelope;
-
-		if (sEnvelope.contains("\\&"))
-			sEnvelope = sEnvelope.replace("\\&", "&");
-
-		final StringTokenizer st = new StringTokenizer(sEnvelope, "&");
-
-		while (st.hasMoreTokens()) {
-			final String tok = st.nextToken();
-
-			final int idx = tok.indexOf('=');
-
-			if (idx >= 0) {
-				final String key = tok.substring(0, idx);
-				final String value = tok.substring(idx + 1);
-				env.put(key, value);
-			}
-		}
-
-		final StringTokenizer hash = new StringTokenizer(env.get("hashord"), "-");
-
-		while (hash.hasMoreTokens()) {
-			final String key = hash.nextToken();
-
-			if (signedEnvelope.length() > 0)
-				signedEnvelope.append('&');
-
-			signedEnvelope.append(key).append('=').append(env.get(key));
-		}
-
-		// TODO: this needs to go in already by the SE. Drop it here, when the
-		// SE places it itself.
-		// System.out.println("envelope is before hashord padding:" +
-		// signedEnvelope);
-		if (!selfSigned) {
-			if (signedEnvelope.length() > 0)
-				signedEnvelope.append('&');
-
-			signedEnvelope.append("hashord=").append(env.get("hashord"));
-		}
-
-		// System.out.println("plain envelope is : " + signedEnvelope);
-		// System.out.println("sign for envelope is : " + env.get("signature"));
-
-		final Signature signer = Signature.getInstance("SHA384withRSA");
+	public static boolean verifyEnvelope(final String envelope, final boolean selfSigned) throws GeneralSecurityException {
+		final SignedAuthzToken authz = new SignedAuthzToken();
 
 		if (selfSigned)
-			signer.initVerify(JAuthZPubKey);
+			authz.setAuthenPubKey(JAuthZPubKey);
 		else
-			signer.initVerify(SEPubKey);
+			authz.setAuthenPubKey(SEPubKey);
 
-		signer.update(signedEnvelope.toString().getBytes());
-
-		return signer.verify(Base64.decode(env.get("signature")));
+		return authz.unseal(envelope) != null;
 	}
 
 	/**

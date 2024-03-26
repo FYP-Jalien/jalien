@@ -1,9 +1,11 @@
 package alien.io.xrootd.envelopes;
 
 import alien.api.TomcatServer;
+import alien.catalogue.LFN_CSD;
 import alien.catalogue.access.XrootDEnvelope;
 import alien.config.ConfigUtils;
 
+import java.security.GeneralSecurityException;
 import java.security.interfaces.RSAPrivateKey;
 
 public class SciTokensAuthzToken extends AuthzToken {
@@ -16,6 +18,11 @@ public class SciTokensAuthzToken extends AuthzToken {
 
     public SciTokensAuthzToken() {
         this.AuthenPrivKey = null;
+    }
+
+    @Override
+    public void init(final XrootDEnvelope envelope, final LFN_CSD lfnc) {
+        envelope.setPlainEnvelope("");
     }
 
     @Override
@@ -32,5 +39,15 @@ public class SciTokensAuthzToken extends AuthzToken {
                 .withExpirationTime(3600)
                 .withScope("storage." + envelope.type.toString() + ":" + sPFN)
                 .sign();
+    }
+
+    @Override
+    public String unseal(final String rawToken) throws GeneralSecurityException {
+        String[] parts = rawToken.split("\\.");
+
+        String header = new String(java.util.Base64.getUrlDecoder().decode(parts[0]));
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+
+        return header + payload;
     }
 }

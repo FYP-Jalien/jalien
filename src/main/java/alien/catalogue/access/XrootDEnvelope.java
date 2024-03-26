@@ -212,6 +212,7 @@ public class XrootDEnvelope implements Serializable {
 
 			final StringTokenizer st = new StringTokenizer(envelope, "\\&");
 			String spfn = "";
+			String path = "";
 			turl = "";
 			String lfn = "";
 			String guid = "";
@@ -241,6 +242,8 @@ public class XrootDEnvelope implements Serializable {
 						turl = value;
 					else if ("pfn".equals(key))
 						spfn = value;
+					else if ("path".equals(key))
+						path = value;
 					else if ("lfn".equals(key))
 						lfn = value;
 					else if ("guid".equals(key))
@@ -253,6 +256,14 @@ public class XrootDEnvelope implements Serializable {
 						se = value;
 				}
 			}
+
+			if (!path.isEmpty()) {
+				guid = path.substring(path.lastIndexOf('/') + 1);
+				final SE rSE = SEUtils.getSE(se);
+				if (rSE != null && rSE.seioDaemons != null && !rSE.seioDaemons.isEmpty())
+					spfn = rSE.seioDaemons + "/" + spfn;
+			}
+
 			final GUID g = GUIDUtils.getGUID(UUID.fromString(guid), true);
 
 			g.md5 = md5;

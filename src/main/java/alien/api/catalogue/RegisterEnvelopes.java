@@ -1,9 +1,7 @@
 package alien.api.catalogue;
 
 import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,7 +13,6 @@ import alien.catalogue.BookingTable;
 import alien.catalogue.BookingTable.BOOKING_STATE;
 import alien.catalogue.PFN;
 import alien.catalogue.access.XrootDEnvelope;
-import alien.catalogue.access.XrootDEnvelopeReply;
 import alien.config.ConfigUtils;
 import alien.io.xrootd.envelopes.XrootDEnvelopeSigner;
 import alien.user.AliEnPrincipal;
@@ -101,7 +98,7 @@ public class RegisterEnvelopes extends Request {
 						final XrootDEnvelope xenv = new XrootDEnvelope(env);
 
 						if (logger.isLoggable(Level.FINER))
-							logger.log(Level.FINER, "Self Signature VERIFIED! : " + xenv.pfn.pfn);
+							logger.log(Level.FINER, "Signature VERIFIED! : " + xenv.pfn.pfn);
 
 						if (flagEntry(BookingTable.getBookedPFN(xenv.pfn.pfn))) {
 							if (logger.isLoggable(Level.FINE))
@@ -112,38 +109,17 @@ public class RegisterEnvelopes extends Request {
 						else
 							logger.log(Level.WARNING, "Could not commit self-signed " + xenv.pfn.pfn + " to the Catalogue");
 					}
-					else if (XrootDEnvelopeSigner.verifyEnvelope(env, false)) {
-						final XrootDEnvelopeReply xenv = new XrootDEnvelopeReply(env);
-
-						if (logger.isLoggable(Level.FINER))
-							logger.log(Level.FINER, "SE Signature VERIFIED! : " + xenv.pfn.pfn);
-
-						if (flagEntry(BookingTable.getBookedPFN(xenv.pfn.pfn))) {
-							if (logger.isLoggable(Level.FINE))
-								logger.log(Level.FINE, "Successfully moved " + xenv.pfn.pfn + " to the Catalogue");
-
-							pfns.add(xenv.pfn);
-						}
-						else
-							logger.log(Level.WARNING, "Could not commit " + xenv.pfn.pfn + " to the Catalogue");
-					}
 					else
 						logger.log(Level.WARNING, "COULD NOT VERIFY ANY SIGNATURE!");
 
 				}
-				catch (final SignatureException e) {
-					logger.log(Level.WARNING, "Wrong signature", e);
-				}
-				catch (final InvalidKeyException e) {
-					logger.log(Level.WARNING, "Invalid key", e);
-				}
-				catch (final NoSuchAlgorithmException e) {
-					logger.log(Level.WARNING, "No such algorithm", e);
-				}
 				catch (final IOException e) {
 					logger.log(Level.WARNING, "IO Exception", e);
 				}
-		}
+				catch (GeneralSecurityException e) {
+					logger.log(Level.WARNING, "General Security Exception", e);
+                }
+        }
 		else if (encryptedEnvelope != null) {
 			pfns = new ArrayList<>(1);
 			final XrootDEnvelope xenv;

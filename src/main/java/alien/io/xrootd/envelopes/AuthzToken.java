@@ -10,9 +10,7 @@ public abstract class AuthzToken {
     /**
      * Initializes the plain envelope
      */
-    public void init(final XrootDEnvelope envelope, final LFN_CSD lfnc) {
-        envelope.setPlainEnvelope("");
-    }
+    public abstract void init(final XrootDEnvelope envelope, final LFN_CSD lfnc);
 
     /**
      * A method to seal the XrootDEnvelope by encrypting or signing it
@@ -28,8 +26,5 @@ public abstract class AuthzToken {
      * @param rawToken the encrypted XrootDEnvelope
      * @return the plain XrootDEnvelope
      */
-    public String unseal(final String rawToken) throws GeneralSecurityException {
-        throw new UnsupportedOperationException();
-    }
-
+    public abstract String unseal(final String rawToken) throws GeneralSecurityException;
 }
