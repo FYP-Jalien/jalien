@@ -94,7 +94,8 @@ public class RegisterEnvelopes extends Request {
 
 			for (final String env : signedEnvelopes)
 				try {
-					if (XrootDEnvelopeSigner.verifyEnvelope(env, true)) {
+					if (XrootDEnvelopeSigner.verifyEnvelope(env, true)
+							|| XrootDEnvelopeSigner.verifyEnvelope(env, false)) {
 						final XrootDEnvelope xenv = new XrootDEnvelope(env);
 
 						if (logger.isLoggable(Level.FINER))
