@@ -38,19 +38,7 @@ sonarqube-check:
     - gradle sonar
   allow_failure: true
   only:
-    - merge_requests
     - master
-    - main
-    - develop
-
-sonarqube-create-badge:
-  stage: analysis
-  script:
-    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/project_badges/measure?project=jalien_jalien_78145297-78e8-46b6-8986-f2edbe8f5cce&metric=alert_status" > quality-badge.svg'
-  allow_failure: true
-  artifacts:
-    paths:
-      - quality-badge.svg
 
 sonarqube-vulnerability-report:
   stage: analysis
@@ -58,10 +46,7 @@ sonarqube-vulnerability-report:
     - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=jalien_jalien_78145297-78e8-46b6-8986-f2edbe8f5cce&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
   allow_failure: true
   only:
-    - merge_requests
     - master
-    - main
-    - develop
   artifacts:
     expire_in: 1 day
     reports:
