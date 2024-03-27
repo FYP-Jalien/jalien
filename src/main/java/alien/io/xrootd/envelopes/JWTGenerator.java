@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class JWTGenerator {
 
@@ -27,7 +26,7 @@ public class JWTGenerator {
         private long expirationTime = 3600;
         private String privateKeyPath = "/etc/grid-security/hostkey.pem";
         private RSAPrivateKey privateKey = null;
-        private String jwtid = "";
+        private String jwtid = "generated-by-jalien";
 
         public Builder withIssuer(String issuer) {
             this.issuer = issuer;
@@ -76,10 +75,6 @@ public class JWTGenerator {
          * @return the JWT token as a string
          */
         public String sign() {
-            if (jwtid.isEmpty()) {
-                jwtid = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
-            }
-
             // Create the JWT header
             byte[] headerBytes = "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"wlcg.ver\":\"1.0\"}".getBytes();
             final String headerBase64 = Base64.getUrlEncoder().withoutPadding().encodeToString(headerBytes);
