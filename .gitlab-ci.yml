@@ -4,12 +4,12 @@ stages:
   - e2e
 
 unit-test:
-    image: openjdk:12
-    script: ./gradlew test
-    stage: unit
-    artifacts:
-        reports:
-            junit: build/test-results/test/TEST-*.xml
+  image: openjdk:12
+  script: ./gradlew test
+  stage: unit
+  artifacts:
+    reports:
+      junit: build/test-results/test/TEST-*.xml
 
 e2e-test:
   image: registry.gitlab.com/finestructure/pipeline-trigger
@@ -34,18 +34,23 @@ sonarqube-check:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
-  script: gradle sonar
+  script:
+    - gradle sonar
+    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/project_badges/measure?project=jalien_jalien_78145297-78e8-46b6-8986-f2edbe8f5cce&metric=alert_status" > quality-badge.svg'
   allow_failure: true
   only:
     - merge_requests
     - master
     - main
     - develop
+  artifacts:
+    paths:
+      - quality-badge.svg
 
 sonarqube-vulnerability-report:
   stage: analysis
   script:
-    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=jalien&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
+    - 'curl -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/issues/gitlab_sast_export?projectKey=jalien_jalien_78145297-78e8-46b6-8986-f2edbe8f5cce&branch=${CI_COMMIT_BRANCH}&pullRequest=${CI_MERGE_REQUEST_IID}" -o gl-sast-sonar-report.json'
   allow_failure: true
   only:
     - merge_requests
