@@ -4456,8 +4456,9 @@ public class TaskQueueUtils {
 			}
 			else if (killingTs != 0) {
 				values.remove("uuid");
+				values.remove("wouldPreempt");
 				logger.log(Level.INFO, "Job " + wouldPreempt + " was killed at ts " + killingTs);
-				String q = "SELECT 1 FROM oom_preemptions where wouldPreempt=" + wouldPreempt + " and resubmissionCounter=" + resubmissionCounter + " and hostId=" + hostId + " and siteId="
+				String q = "SELECT 1 FROM oom_preemptions where queueId=" + wouldPreempt + " and resubmissionCounter=" + resubmissionCounter + " and hostId=" + hostId + " and siteId="
 						+ siteId + ";";
 				db.query(q);
 				if (db.moveNext()) {
@@ -4470,11 +4471,12 @@ public class TaskQueueUtils {
 					values.put("killingSlotMemory", Double.valueOf(killingSlotMemory));
 					values.put("killingSlotSwMemory", Double.valueOf(killingSlotSwMemory));
 
-					q = DBFunctions.composeUpdate("oom_preemptions", values, Arrays.asList("wouldPreempt", "resubmissionCounter", "hostId", "siteId"));
+					q = DBFunctions.composeUpdate("oom_preemptions", values, Arrays.asList("queueId", "resubmissionCounter", "hostId", "siteId"));
 					if (!db.query(q))
 						return false;
 				}
 				else {
+					values.remove("wouldPreempt");
 					values.put("queueId", Long.valueOf(wouldPreempt));
 					q = DBFunctions.composeInsert("oom_preemptions", values);
 					if (!db.query(q))
