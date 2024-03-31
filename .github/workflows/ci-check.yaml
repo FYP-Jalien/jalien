@@ -1,0 +1,91 @@
+name: Run jalien-setup and test-suite
+on: [push]
+jobs:
+  ci-cd-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v1
+      - name: Setup cvmfs
+        run: |
+          sudo wget https://ecsft.cern.ch/dist/cvmfs/cvmfs-release/cvmfs-release-latest_all.deb
+          sudo dpkg -i cvmfs-release-latest_all.deb
+          sudo rm -f cvmfs-release-latest_all.deb
+          sudo apt-get update
+          sudo apt-get install -y cvmfs
+      - name: Create /etc/cvmfs/default.local
+        run: |
+          sudo bash -c "echo '
+          CVMFS_REPOSITORIES=alice.cern.ch
+          CVMFS_CLIENT_PROFILE=single
+          CVMFS_HTTP_PROXY=DIRECT
+          ' >> /etc/cvmfs/default.local"
+          cat /etc/cvmfs/default.local
+          sudo cvmfs_config setup
+      - name: Install alien.py
+        run: |
+          sudo apt install python3-xrootd
+          pip install alienpy   
+      - name: Update /etc/hosts
+        run: |
+          sudo bash -c "echo '
+          127.0.0.1       JCentral-dev
+          127.0.0.1       JCentral-dev-SE
+          172.18.0.2      alice-jcentral.cern.ch
+          ' >> /etc/hosts"  
+          cat /etc/hosts
+      - name: Clone jalien-setup
+        run: |
+          cd ${{ github.workspace }}
+          cd ..
+          git clone https://github.com/FYP-Jalien/jalien-setup
+      - name: Create config.sh for bash
+        run: |
+          cd ${{ github.workspace }}
+          cd ..
+          echo "
+          export BASE_DIR=$(pwd)
+          export SCRIPT_DIR=$(pwd)/jalien-setup/bash
+          export SHARED_VOLUME=$(pwd)/SHARED_VOLUME
+          export JALIEN=$(pwd)/jalien
+          export JALIEN_SETUP=$(pwd)/jalien-setup
+          export JALIEN_SOURCE=https://gitlab.cern.ch/jalien/jalien
+          export JALIEN_SETUP_SOURCE=https://github.com/FYP-Jalien/jalien-setup
+          export CE_NAME=shared_volume_JCentral-dev-CE_1
+          export JCENTRAL_NAME=shared_volume_JCentral-dev_1
+          export SCHEDD_NAME=shared_volume_schedd_1
+          export SE_NAME=shared_volume_JCentral-dev-SE_1
+          export WORKER_NAME=shared_volume_worker1_1
+          " >> ${{ github.workspace }}/../jalien-setup/bash/config/config.sh
+      - name: Run jalien-setup bash scripts
+        run: |
+          cd ${{ github.workspace }}/../jalien-setup/bash
+          ./tasks/start.sh --shared
+      - name: Clone test-suite
+        run: |
+          cd ${{ github.workspace }}
+          cd ..
+          git clone https://github.com/FYP-Jalien/test-suite
+      - name: Create .env for test-suite
+        run: |
+          cd ${{ github.workspace }}
+          cd ..
+          echo "
+          export SHARED_VOLUME_PATH=$(pwd)/SHARED_VOLUME
+          export JALIEN_SETUP_PATH=$(pwd)/jalien-setup
+          export CONTAINER_NAME_CE=shared_volume_JCentral-dev-CE_1
+          export CONTAINER_NAME_CENTRAL=shared_volume_JCentral-dev_1
+          export CONTAINER_NAME_SCHEDD=shared_volume_schedd_1
+          export CONTAINER_NAME_SE=shared_volume_JCentral-dev-SE_1
+          export CONTAINER_NAME_WORKER=shared_volume_worker1_1
+          export SCRIPT_DIR=$(pwd)/test-suite
+          export ALIENV_PATH=$(pwd)/test-suite/files/alma-alienv
+          export SAMPLE_JDL_PATH=$(pwd)/test-suite/files/sample_test.jdl
+          export TESTSCRIPT_PATH=$(pwd)/test-suite/files/testscript_test.sh
+          " >> ${{ github.workspace }}/../test-suite/.env   
+      - name: Run test-suite
+        run: |
+          cd ${{ github.workspace }}/../test-suite
+          ./index.sh 
