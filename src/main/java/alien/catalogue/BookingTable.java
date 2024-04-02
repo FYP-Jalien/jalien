@@ -106,7 +106,7 @@ public class BookingTable {
 		try (DBFunctions db = getDB()) {
 			// check if the GUID is already registered in the catalogue
 			final GUID checkGUID = GUIDUtils.getGUID(requestedGUID.guid);
-
+			System.out.System.err.println("aaaaa");
 			if (checkGUID != null) {
 				// first question, is the user allowed to write it ?
 				if (!AuthorizationChecker.canWrite(checkGUID, user))
