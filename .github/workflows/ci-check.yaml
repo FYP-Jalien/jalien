@@ -1,5 +1,5 @@
 name: Run jalien-setup and test-suite
-on: 
+on:
   pull_request:
     branches:
       - master
@@ -11,26 +11,9 @@ jobs:
         uses: actions/checkout@v2
       - name: Set up Docker
         uses: docker/setup-buildx-action@v1
-      - name: Setup cvmfs
+      - name: Install xrootd
         run: |
-          sudo wget https://ecsft.cern.ch/dist/cvmfs/cvmfs-release/cvmfs-release-latest_all.deb
-          sudo dpkg -i cvmfs-release-latest_all.deb
-          sudo rm -f cvmfs-release-latest_all.deb
-          sudo apt-get update
-          sudo apt-get install -y cvmfs
-      - name: Create /etc/cvmfs/default.local
-        run: |
-          sudo bash -c "echo '
-          CVMFS_REPOSITORIES=alice.cern.ch
-          CVMFS_CLIENT_PROFILE=single
-          CVMFS_HTTP_PROXY=DIRECT
-          ' >> /etc/cvmfs/default.local"
-          cat /etc/cvmfs/default.local
-          sudo cvmfs_config setup
-      - name: Install alien.py
-        run: |
-          sudo apt install python3-xrootd
-          pip install alienpy   
+          sudo apt install xrootd-client xrootd-server python3-xrootd
       - name: Update /etc/hosts
         run: |
           sudo bash -c "echo '
@@ -62,10 +45,6 @@ jobs:
           export SE_NAME=shared_volume_JCentral-dev-SE_1
           export WORKER_NAME=shared_volume_worker1_1
           " >> ${{ github.workspace }}/../jalien-setup/bash/config/config.sh
-      - name: Run jalien-setup bash scripts
-        run: |
-          cd ${{ github.workspace }}/../jalien-setup/bash
-          ./tasks/start.sh --shared
       - name: Clone test-suite
         run: |
           cd ${{ github.workspace }}
@@ -87,8 +66,16 @@ jobs:
           export ALIENV_PATH=$(pwd)/test-suite/files/alma-alienv
           export SAMPLE_JDL_PATH=$(pwd)/test-suite/files/sample_test.jdl
           export TESTSCRIPT_PATH=$(pwd)/test-suite/files/testscript_test.sh
-          " >> ${{ github.workspace }}/../test-suite/.env   
+          " >> ${{ github.workspace }}/../test-suite/.env
+      - name: Run host specific tests
+        run: |
+          cd ${{ github.workspace }}/../test-suite
+          ./index.sh --host-only
+      - name: Run jalien-setup bash scripts
+        run: |
+          cd ${{ github.workspace }}/../jalien-setup/bash
+          ./start.sh --shared
       - name: Run test-suite
         run: |
           cd ${{ github.workspace }}/../test-suite
-          ./index.sh 
+          ./index.sh
